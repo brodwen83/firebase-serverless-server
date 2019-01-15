@@ -1,5 +1,6 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const cors = require("cors")({ origin: true });
 
 const express = require("express");
 const dotenv = require("dotenv");
@@ -29,3 +30,13 @@ main.use("/api/v1/users", userRoutes);
 main.use("/api/v1/upload", uploadRoutes);
 
 exports.ryoakiApp = functions.https.onRequest(main);
+
+exports.uploadAdvertisements = functions.https.onRequest((req, res) => {
+  cors(req, res, () => {
+    if (req.method !== "POST") {
+      return res.status(500).json({ message: "Not Allowed" });
+    }
+
+    res.send("Its working!");
+  });
+});
