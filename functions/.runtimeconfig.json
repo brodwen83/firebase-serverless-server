@@ -1,0 +1,14 @@
+{
+  "api": {
+    "sample": "sample"
+  },
+  "ryoaki": {
+    "messagingsenderid": "341023860373",
+    "api": "AIzaSyD0FEkybUmvbqzVP-wgKJrHknH8yeoL6mM",
+    "authdomain": "ryoaki-api-server.firebaseapp.com",
+    "storagebucket": "ryoaki-api-server.appspot.com",
+    "jwtsecret": "nIc0l3",
+    "projectid": "ryoaki-api-server",
+    "databaseurl": "https://ryoaki-api-server.firebaseio.com"
+  }
+}

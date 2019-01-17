@@ -10,9 +10,19 @@ const router = express.Router();
 
 const isPrivateNotification = flags => {
   // TODO: check if all flags are false otherwise get all users that has the flags then  return
+  const usersRef = db.collection("users");
+  const usersFlagsRef = usersRef.userFlags;
+
+  const usersShouldReceivePrivateNotifications = usersRef.where(
+    usersFlagsRef,
+    "==",
+    flags
+  );
+
   return {
     isPrivate: true, // this is for simulations only... logic will be here
-    users: ["dC0pzP9KMUV7o15aWvbIlMzXb7P2"]
+    users: ["dC0pzP9KMUV7o15aWvbIlMzXb7P2"],
+    usersPrivateNotifed: usersShouldReceivePrivateNotifications
   };
 };
 
@@ -22,7 +32,9 @@ router.post(
   (req, res) => {
     const notification = req.body;
     const flags = req.body.flags;
-    const { isPrivate, users } = isPrivateNotification(flags);
+    const { isPrivate, users, usersPrivateNotifed } = isPrivateNotification(
+      flags
+    );
 
     // A public Notification
     if (!isPrivate) {
@@ -34,6 +46,7 @@ router.post(
       });
     }
 
+    console.log("users");
     // if it is a private notification
     // TODO: i will loop throu all users here... only this time for sampling
     const allPrivateNotificationsRef = db.collection("allPrivateNotifications");
@@ -53,4 +66,5 @@ router.post(
       });
   }
 );
+
 module.exports = router;

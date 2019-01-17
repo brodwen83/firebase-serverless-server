@@ -3,11 +3,11 @@ const admin = require("firebase-admin");
 admin.initializeApp(functions.config().firebase);
 
 const express = require("express");
-const dotenv = require("dotenv");
+const dotenv = require("dotenv").config();
 const bodyParser = require("body-parser");
 const passport = require("passport");
 
-dotenv.config();
+// dotenv.config();
 
 const firebase = require("firebase/app");
 require("firebase/auth");
@@ -56,4 +56,55 @@ exports.syncFlagPrivateNotification = functions.firestore
     );
 
     return userPrivateNotificationRef.add(notification);
+  });
+
+exports.addDebts = functions.https.onRequest((req, res) => {
+  const lend = req.query.lend;
+  return admin
+    .database()
+    .ref("/users")
+    .push({ debts: lend })
+    .then(snapshot => {
+      return res.redirect(303, snapshot.ref.toString());
+    });
+});
+
+exports.requestLend = functions.database
+  .ref("/users/{id}/debts")
+  .onCreate((snapshot, context) => {
+    admin
+      .database()
+      .ref("/debtHistories")
+      .push({
+        debts: snapshot.val(),
+        status: "pending",
+        debtId: context.params.id
+      });
+    return snapshot.ref.parent.child("status").set("pending");
+  });
+
+const postDebtHistory = posting => {
+  return admin
+    .firestore()
+    .collection("debtHistories")
+    .add(posting)
+    .then(doc => console.log("loan request added", doc));
+};
+
+exports.userDebts = functions.firestore
+  .document("users/{id}")
+
+  // This could be onWrite... ?
+  .onUpdate((snapshot, context) => {
+    const data = snapshot.after.data();
+    const previousData = snapshot.before.data();
+
+    // TODO: clean which field is being updated... this is asumptions only.
+    const posting = {
+      content: `${previousData.firstName} ${
+        previousData.lastName
+      } requested a new loan of ${data.debts}`,
+      time: admin.firestore.FieldValue.serverTimestamp()
+    };
+    return postDebtHistory(posting);
   });

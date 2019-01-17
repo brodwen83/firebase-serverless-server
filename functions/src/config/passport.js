@@ -10,7 +10,7 @@ const firebaseHelper = require("firebase-functions-helper");
 
 const options = {};
 options.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
-options.secretOrKey = functions.config().ryoaki.jwtsecret;
+options.secretOrKey = process.env.JWT_SECRET;
 
 module.exports = passport => {
   passport.use(

@@ -12,7 +12,7 @@ const validateRegistration = require("../../validations/register");
 const validateLogin = require("../../validations/login");
 
 const createCustomToken = payload => {
-  return jwt.sign(payload, functions.config().ryoaki.jwtsecret, {
+  return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: "1h"
   });
 };
