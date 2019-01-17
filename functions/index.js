@@ -47,15 +47,15 @@ const db = admin.firestore();
 
 exports.syncFlagPrivateNotification = functions.firestore
   .document("allPrivateNotifications/{id}")
-  .onCreate(doc => {
+  .onCreate((doc, context) => {
     const notification = doc.data();
+    console.log(doc);
     const specificReceiver = notification.specificReceiver;
     console.log("syncing...", specificReceiver);
     const userPrivateNotificationRef = db.collection(
       `/users/${specificReceiver}/privateNotifications`
     );
-
-    return userPrivateNotificationRef.add(notification);
+    return userPrivateNotificationRef.doc(context.params.id).set(notification);
   });
 
 exports.addDebts = functions.https.onRequest((req, res) => {

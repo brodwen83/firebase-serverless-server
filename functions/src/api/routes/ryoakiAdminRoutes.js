@@ -8,21 +8,20 @@ const db = firebase.firestore();
 
 const router = express.Router();
 
-const isPrivateNotification = flags => {
+const isPrivateNotification = receiverFlags => {
   // TODO: check if all flags are false otherwise get all users that has the flags then  return
-  const usersRef = db.collection("users");
+  let usersRef = db.collection("users");
   const usersFlagsRef = usersRef.userFlags;
 
-  const usersShouldReceivePrivateNotifications = usersRef.where(
-    usersFlagsRef,
-    "==",
-    flags
+  let userFlagsConditions = [];
+  userFlagsConditions = Object.keys(receiverFlags).filter(
+    flags => receiverFlags[flags] == true
   );
 
   return {
-    isPrivate: true, // this is for simulations only... logic will be here
-    users: ["dC0pzP9KMUV7o15aWvbIlMzXb7P2"],
-    usersPrivateNotifed: usersShouldReceivePrivateNotifications
+    // isPrivate: true, // this is for simulations only... logic will be here
+    users: ["v2goaeA9h7gdo1De3lxkgmGM13Y2"],
+    conditions: userFlagsConditions
   };
 };
 
@@ -31,22 +30,26 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     const notification = req.body;
-    const flags = req.body.flags;
-    const { isPrivate, users, usersPrivateNotifed } = isPrivateNotification(
-      flags
-    );
+    console.log(req.body);
+
+    const {
+      isPrivate,
+      users,
+      usersPrivateNotifed,
+      conditions
+    } = isPrivateNotification(req.body.receiverFlags);
 
     // A public Notification
-    if (!isPrivate) {
+    if (conditions.length === 0) {
+      console.log("conditions: ", conditions);
+      // No conditions met therefore a public notification
       const notificationRef = db.collection("publicNotifications");
-
-      notificationRef.add(notification).then(refDoc => {
+      return notificationRef.add(notification).then(refDoc => {
         console.log("added new public notification", refDoc.id);
-        return res.status(200).json("New notification added");
+        res.json({ message: "New public notification added" });
       });
     }
 
-    console.log("users");
     // if it is a private notification
     // TODO: i will loop throu all users here... only this time for sampling
     const allPrivateNotificationsRef = db.collection("allPrivateNotifications");
@@ -54,16 +57,11 @@ router.post(
       specificReceiver: users[0]
     });
 
-    allPrivateNotificationsRef
-      .add(newPrivateNotification)
-      .then(ref => {
-        console.log("success fully added new private notification", ref.id);
-        console.log("specificReceiver:", ref.specificReceiver);
-        res.status(200).json({ message: "new private notification" });
-      })
-      .catch(error => {
-        res.status(400).json("Error adding private notification", error);
-      });
+    return allPrivateNotificationsRef.add(newPrivateNotification).then(ref => {
+      console.log("success fully added new private notification", ref.id);
+      console.log("specificReceiver:", ref.specificReceiver);
+      res.status(200).json({ message: "new private notification" });
+    });
   }
 );
 
