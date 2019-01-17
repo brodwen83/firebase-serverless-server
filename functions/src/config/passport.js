@@ -12,6 +12,10 @@ const options = {};
 options.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
 options.secretOrKey = functions.config().ryoaki.jwtsecret;
 
+/**
+ *  @description  Creates a passport strategy
+ *  @param        {object} passport
+ */
 module.exports = passport => {
   passport.use(
     new JwtStrategy(options, (jwt_payload, done) => {

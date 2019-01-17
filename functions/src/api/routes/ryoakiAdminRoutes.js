@@ -8,6 +8,10 @@ const db = firebase.firestore();
 
 const router = express.Router();
 
+/**
+ *  @description  checks if certain receiverFlags are true and returns an array of conditions if there are any
+ *  @param        {object} receiverFlags Contains all flags
+ */
 const isPrivateNotification = receiverFlags => {
   // TODO: check if all flags are false otherwise get all users that has the flags then  return
   let usersRef = db.collection("users");
@@ -25,6 +29,11 @@ const isPrivateNotification = receiverFlags => {
   };
 };
 
+/**
+ *  @description  creates a notification / private notification if falls on some flags conditions
+ *  @route        ryoakiApp/api/v1/ryoaki-admin/createNotification
+ *  @param        {object} notification Contains text and flags
+ */
 router.post(
   "/createNotification",
   passport.authenticate("jwt", { session: false }),

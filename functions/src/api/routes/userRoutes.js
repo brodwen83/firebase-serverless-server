@@ -11,6 +11,10 @@ const appFirestore = firebase.firestore();
 const validateRegistration = require("../../validations/register");
 const validateLogin = require("../../validations/login");
 
+/**
+ *  @description  Authenticates user and sends a custom token
+ *  @param        {object} payload for creating signed token
+ */
 const createCustomToken = payload => {
   return jwt.sign(payload, functions.config().ryoaki.jwtsecret, {
     expiresIn: "1h"
@@ -18,9 +22,9 @@ const createCustomToken = payload => {
 };
 
 /**
- *  @route        GET /auth/login
- *  @description  Login User / Returning JWT Token
- *  @access       Public
+ *  @description  Authenticates user and sends a custom token
+ *  @route        ryoakiApp/api/v1/users/login
+ *  @param        {object} credentials Contains email and password
  */
 router.post("/login", (req, res) => {
   const { errors, isValid } = validateLogin(req.body);
@@ -45,9 +49,9 @@ router.post("/login", (req, res) => {
 });
 
 /**
- *  @route        GET /auth/register
- *  @description  Register User
- *  @access       Public
+ *  @description  Authenticates user and sends a custom token
+ *  @route        ryoakiApp/api/v1/users/register
+ *  @param        {object} credentials Contains 'email', 'password', 'password2', and 'name'
  */
 router.post("/register", (req, res) => {
   const { errors, isValid } = validateRegistration(req.body);

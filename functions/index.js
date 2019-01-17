@@ -45,6 +45,9 @@ exports.uploadAdvertisements = functions.https.onRequest((req, res) => {
 
 const db = admin.firestore();
 
+/**
+ *  @description  Triggers when there is a new document in the top level 'allPrivateNotification' collection
+ */
 exports.syncFlagPrivateNotification = functions.firestore
   .document("allPrivateNotifications/{id}")
   .onCreate((doc, context) => {
