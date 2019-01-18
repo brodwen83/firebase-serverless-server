@@ -5,6 +5,7 @@ const firebase = require("firebase/app");
 require("firebase/firestore");
 
 const db = firebase.firestore();
+db.settings({ timestampsInSnapshots: true });
 
 const router = express.Router();
 
@@ -41,10 +42,9 @@ router.post(
     );
 
     // A public Notification
+    const notificationRef = db.collection("notifications");
     if (!isPrivate && conditions.length === 0) {
       console.log("publi conditions: ", conditions);
-      // No conditions met therefore a public notification
-      const notificationRef = db.collection("publicNotifications");
       return notificationRef.add(notification).then(refDoc => {
         console.log("added new public notification", refDoc.id);
         res.json({ message: "New public notification added" });
@@ -52,13 +52,13 @@ router.post(
     }
 
     console.log("private conditions: ", conditions);
+    let customquery = 'db.collection("users")';
     let usersRefQuery = db.collection("users");
-
     conditions.forEach(condition => {
       usersRefQuery = usersRefQuery.where(`userFlags.${condition}`, "==", true);
+      customquery =
+        customquery + `.where("userFlags.${condition}", "==", true)`;
     });
-
-    const allPrivateNotificationsRef = db.collection("allPrivateNotifications");
 
     usersRefQuery
       .get()
@@ -67,18 +67,32 @@ router.post(
           console.log("No matching documents.");
           return res.status(404).json({ noDocument: "No matching documents" });
         }
-
-        snapshots.forEach(async doc => {
+        console.log(customquery);
+        snapshots.forEach(doc => {
+          console.log(doc.id, "=>", doc.data());
           const newPrivateNotification = Object.assign(notification, {
             specificReceiver: doc.id
           });
 
-          const ref = await allPrivateNotificationsRef.add(
-            newPrivateNotification
-          );
-          console.log("success fully added new private notification", ref.id);
-          console.log("specificReceiver:", ref.specificReceiver);
-          res.status(200).json({ message: "new private notification" });
+          return notificationRef
+            .add(newPrivateNotification)
+            .then(ref => {
+              console.log(
+                "success fully added new private notification",
+                ref.id
+              );
+              return res.status(200).json({
+                message: "new private notification",
+                notificationId: ref.id
+              });
+            })
+            .catch(err =>
+              res.status(400).json({
+                errorAddNotification:
+                  "Something went wrong when adding notification",
+                err
+              })
+            );
         });
       })
       .catch(err => {
