@@ -11,20 +11,16 @@ const router = express.Router();
 /**
  *  @description  checks if certain receiverFlags are true and returns an array of conditions if there are any
  *  @param        {object} receiverFlags Contains all flags
+ *  @returns      {object} isPrivate, conditions
  */
 const isPrivateNotification = receiverFlags => {
-  // TODO: check if all flags are false otherwise get all users that has the flags then  return
-  let usersRef = db.collection("users");
-  const usersFlagsRef = usersRef.userFlags;
-
   let userFlagsConditions = [];
   userFlagsConditions = Object.keys(receiverFlags).filter(
     flags => receiverFlags[flags] == true
   );
 
   return {
-    // isPrivate: true, // this is for simulations only... logic will be here
-    users: ["v2goaeA9h7gdo1De3lxkgmGM13Y2"],
+    isPrivate: userFlagsConditions.length !== 0 ? true : false,
     conditions: userFlagsConditions
   };
 };
@@ -40,17 +36,13 @@ router.post(
   (req, res) => {
     const notification = req.body;
     console.log(req.body);
-
-    const {
-      isPrivate,
-      users,
-      usersPrivateNotifed,
-      conditions
-    } = isPrivateNotification(req.body.receiverFlags);
+    const { isPrivate, conditions } = isPrivateNotification(
+      req.body.receiverFlags
+    );
 
     // A public Notification
-    if (conditions.length === 0) {
-      console.log("conditions: ", conditions);
+    if (!isPrivate && conditions.length === 0) {
+      console.log("publi conditions: ", conditions);
       // No conditions met therefore a public notification
       const notificationRef = db.collection("publicNotifications");
       return notificationRef.add(notification).then(refDoc => {
@@ -59,18 +51,39 @@ router.post(
       });
     }
 
-    // if it is a private notification
-    // TODO: i will loop throu all users here... only this time for sampling
-    const allPrivateNotificationsRef = db.collection("allPrivateNotifications");
-    const newPrivateNotification = Object.assign(notification, {
-      specificReceiver: users[0]
+    console.log("private conditions: ", conditions);
+    let usersRefQuery = db.collection("users");
+
+    conditions.forEach(condition => {
+      usersRefQuery = usersRefQuery.where(`userFlags.${condition}`, "==", true);
     });
 
-    return allPrivateNotificationsRef.add(newPrivateNotification).then(ref => {
-      console.log("success fully added new private notification", ref.id);
-      console.log("specificReceiver:", ref.specificReceiver);
-      res.status(200).json({ message: "new private notification" });
-    });
+    const allPrivateNotificationsRef = db.collection("allPrivateNotifications");
+
+    usersRefQuery
+      .get()
+      .then(snapshots => {
+        if (snapshots.empty) {
+          console.log("No matching documents.");
+          return res.status(404).json({ noDocument: "No matching documents" });
+        }
+
+        snapshots.forEach(async doc => {
+          const newPrivateNotification = Object.assign(notification, {
+            specificReceiver: doc.id
+          });
+
+          const ref = await allPrivateNotificationsRef.add(
+            newPrivateNotification
+          );
+          console.log("success fully added new private notification", ref.id);
+          console.log("specificReceiver:", ref.specificReceiver);
+          res.status(200).json({ message: "new private notification" });
+        });
+      })
+      .catch(err => {
+        console.log("Error getting documents", err);
+      });
   }
 );
 
