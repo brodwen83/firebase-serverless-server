@@ -32,7 +32,7 @@ const isPrivateNotification = receiverFlags => {
  *  @param        {object} notification Contains text and flags
  */
 router.post(
-  "/createNotification",
+  "/notification",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     const notification = req.body;
@@ -59,7 +59,7 @@ router.post(
  *  @param        {string} uid user reference id
  */
 router.get(
-  "/list-notifications/:uid",
+  "/notifications/:uid",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     const userId = req.params.uid;
@@ -112,7 +112,10 @@ router.get(
               console.log("No matching documents.");
             } else {
               snapshot.forEach(doc => {
-                notificationsWithConditions.push(doc.data());
+                notificationsWithConditions.push({
+                  id: doc.id,
+                  notification: doc.data()
+                });
               });
               console.log(
                 "Notification with conditions: ",
@@ -132,7 +135,10 @@ router.get(
                   console.log("No matching documents.");
                 } else {
                   snapshot.forEach(doc => {
-                    usersNotifications.push(doc.data());
+                    usersNotifications.push({
+                      id: doc.id,
+                      notification: doc.data()
+                    });
                   });
                 }
                 console.log("usersnotifications: ", usersNotifications);
