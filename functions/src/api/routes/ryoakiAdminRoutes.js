@@ -10,25 +10,8 @@ db.settings({ timestampsInSnapshots: true });
 const router = express.Router();
 
 /**
- *  @description  checks if certain receiverFlags are true and returns an array of conditions if there are any
- *  @param        {object} receiverFlags Contains all flags
- *  @returns      {object} isPrivate, conditions
- */
-const isPrivateNotification = receiverFlags => {
-  let userFlagsConditions = [];
-  userFlagsConditions = Object.keys(receiverFlags).filter(
-    flags => receiverFlags[flags] == true
-  );
-
-  return {
-    isPrivate: userFlagsConditions.length !== 0 ? true : false,
-    conditions: userFlagsConditions
-  };
-};
-
-/**
- *  @description  creates a notification / private notification if falls on some flags conditions
- *  @route        ryoakiApp/api/v1/ryoaki-admin/createNotification
+ *  @description  creates a notification
+ *  @route        POST /ryoakiApp/api/v1/ryoaki-admin/notification
  *  @param        {object} notification Contains text and flags
  */
 router.post(
@@ -54,9 +37,110 @@ router.post(
 );
 
 /**
- *  @description  get all notifications by userId
- *  @route        ryoakiApp/api/v1/ryoaki-admin/notifications/:uid
+ *  @description  update notification by id
+ *  @route        POST /ryoakiApp/api/v1/ryoaki-admin/notification/:id
+ *  @param        {string} id request parameter id
+ */
+router.patch(
+  "/notification/:id",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const notificationDocRef = db
+      .collection("notifications")
+      .doc(req.params.id)
+      .set(req.body)
+      .then(ref => {
+        console.log("update successful");
+        res.send({ success: true, message: "successfuly updated" });
+      })
+      .catch(err => {
+        console.log("error updating notification", err);
+        res
+          .status(400)
+          .send({ success: false, message: "error updating document", err });
+      });
+  }
+);
+
+/**
+ *  @description  get notification by id
+ *  @route        GET /ryoakiApp/api/v1/ryoaki-admin/notification/:id
+ *  @param        {string} id request parameter id
+ */
+router.get(
+  "/notification/:id",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const notificationDocRef = db
+      .collection("notifications")
+      .doc(req.params.id)
+      .get()
+      .then(doc => {
+        if (!doc.exists) {
+          console.log("No such document", req.params.id);
+          return res
+            .status(404)
+            .json({ success: false, message: "No such document" });
+        } else {
+          if (doc.data().isDeleted) {
+            console.log("deleted document", req.params.id);
+            return res.status(404).json({
+              success: false,
+              message: "No such document or it is being deleted"
+            });
+          }
+
+          res.send({ id: doc.id, notification: doc.data() });
+        }
+      })
+      .catch(err => {
+        console.log("Get notification error", err);
+        res.status(400).json({
+          success: false,
+          message: "Error getting notification with that id"
+        });
+      });
+  }
+);
+
+/**
+ *  @description  Get all notifications
+ *  @route        GET /ryoakiApp/api/v1/ryoaki-admin/notifications
+ *  @returns      {Object} notifications
+ */
+router.get(
+  "/notifications",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const allNotifications = [];
+    const notificationRef = db
+      .collection("notifications")
+      .get()
+      .then(snapshot => {
+        if (snapshot.empty) {
+          console.log("No notifications");
+          return res
+            .status(404)
+            .json({ success: false, message: "No notification" });
+        }
+        snapshot.forEach(doc => {
+          allNotifications.push({ id: doc.id, notification: doc.data() });
+        });
+        res.send({ notifications: Object.assign({}, allNotifications) });
+      })
+      .catch(err => {
+        res
+          .send(400)
+          .send({ success: false, message: "error getting notifications" });
+      });
+  }
+);
+
+/**
+ *  @description  Get all notifications list by userId
+ *  @route        GET /ryoakiApp/api/v1/ryoaki-admin/notifications/:uid
  *  @param        {string} uid user reference id
+ *  @returns      {Object} notifications
  */
 router.get(
   "/notifications/:uid",
