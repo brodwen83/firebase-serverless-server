@@ -6,6 +6,7 @@ const express = require("express");
 const dotenv = require("dotenv").config();
 const bodyParser = require("body-parser");
 const passport = require("passport");
+const cors = require("cors");
 
 // dotenv.config();
 
@@ -21,6 +22,8 @@ const uploadRoutes = require("./src/api/routes/uploadRoutes");
 const ryoakiAdminRoutes = require("./src/api/routes/ryoakiAdminRoutes");
 const main = express();
 
+main.use(cors({ origin: true }));
+
 main.use(bodyParser.json());
 main.use(bodyParser.urlencoded({ extended: false }));
 main.use(passport.initialize());
@@ -34,13 +37,13 @@ main.use("/api/v1/ryoaki-admin", ryoakiAdminRoutes);
 exports.ryoakiApp = functions.https.onRequest(main);
 
 exports.uploadAdvertisements = functions.https.onRequest((req, res) => {
-  cors(req, res, () => {
-    if (req.method !== "POST") {
-      return res.status(500).json({ message: "Not Allowed" });
-    }
+    cors(req, res, () => {
+        if (req.method !== "POST") {
+            return res.status(500).json({ message: "Not Allowed" });
+        }
 
-    res.send("Its working!");
-  });
+        res.send("Its working!");
+    });
 });
 
 const db = admin.firestore();
@@ -49,65 +52,67 @@ const db = admin.firestore();
  *  @description  Triggers when there is a new document in the top level 'allPrivateNotification' collection
  */
 exports.syncFlagPrivateNotification = functions.firestore
-  .document("allPrivateNotifications/{id}")
-  .onCreate((doc, context) => {
-    const notification = doc.data();
-    console.log(doc);
-    const specificReceiver = notification.specificReceiver;
-    console.log("syncing...", specificReceiver);
-    const userPrivateNotificationRef = db.collection(
-      `/users/${specificReceiver}/privateNotifications`
-    );
-    return userPrivateNotificationRef.doc(context.params.id).set(notification);
-  });
+    .document("allPrivateNotifications/{id}")
+    .onCreate((doc, context) => {
+        const notification = doc.data();
+        console.log(doc);
+        const specificReceiver = notification.specificReceiver;
+        console.log("syncing...", specificReceiver);
+        const userPrivateNotificationRef = db.collection(
+            `/users/${specificReceiver}/privateNotifications`
+        );
+        return userPrivateNotificationRef
+            .doc(context.params.id)
+            .set(notification);
+    });
 
 exports.addDebts = functions.https.onRequest((req, res) => {
-  const lend = req.query.lend;
-  return admin
-    .database()
-    .ref("/users")
-    .push({ debts: lend })
-    .then(snapshot => {
-      return res.redirect(303, snapshot.ref.toString());
-    });
+    const lend = req.query.lend;
+    return admin
+        .database()
+        .ref("/users")
+        .push({ debts: lend })
+        .then(snapshot => {
+            return res.redirect(303, snapshot.ref.toString());
+        });
 });
 
 exports.requestLend = functions.database
-  .ref("/users/{id}/debts")
-  .onCreate((snapshot, context) => {
-    admin
-      .database()
-      .ref("/debtHistories")
-      .push({
-        debts: snapshot.val(),
-        status: "pending",
-        debtId: context.params.id
-      });
-    return snapshot.ref.parent.child("status").set("pending");
-  });
+    .ref("/users/{id}/debts")
+    .onCreate((snapshot, context) => {
+        admin
+            .database()
+            .ref("/debtHistories")
+            .push({
+                debts: snapshot.val(),
+                status: "pending",
+                debtId: context.params.id
+            });
+        return snapshot.ref.parent.child("status").set("pending");
+    });
 
 const postDebtHistory = posting => {
-  return admin
-    .firestore()
-    .collection("debtHistories")
-    .add(posting)
-    .then(doc => console.log("loan request added", doc));
+    return admin
+        .firestore()
+        .collection("debtHistories")
+        .add(posting)
+        .then(doc => console.log("loan request added", doc));
 };
 
 exports.userDebts = functions.firestore
-  .document("users/{id}")
+    .document("users/{id}")
 
-  // This could be onWrite... ?
-  .onUpdate((snapshot, context) => {
-    const data = snapshot.after.data();
-    const previousData = snapshot.before.data();
+    // This could be onWrite... ?
+    .onUpdate((snapshot, context) => {
+        const data = snapshot.after.data();
+        const previousData = snapshot.before.data();
 
-    // TODO: clean which field is being updated... this is asumptions only.
-    const posting = {
-      content: `${previousData.firstName} ${
-        previousData.lastName
-      } requested a new loan of ${data.debts}`,
-      time: admin.firestore.FieldValue.serverTimestamp()
-    };
-    return postDebtHistory(posting);
-  });
+        // TODO: clean which field is being updated... this is asumptions only.
+        const posting = {
+            content: `${previousData.firstName} ${
+                previousData.lastName
+            } requested a new loan of ${data.debts}`,
+            time: admin.firestore.FieldValue.serverTimestamp()
+        };
+        return postDebtHistory(posting);
+    });
