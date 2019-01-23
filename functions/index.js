@@ -6,6 +6,7 @@ const express = require("express");
 const dotenv = require("dotenv").config();
 const bodyParser = require("body-parser");
 const passport = require("passport");
+const cors = require("cors");
 
 // dotenv.config();
 
@@ -20,6 +21,8 @@ const userRoutes = require("./src/api/routes/userRoutes");
 const uploadRoutes = require("./src/api/routes/uploadRoutes");
 const ryoakiAdminRoutes = require("./src/api/routes/ryoakiAdminRoutes");
 const main = express();
+
+main.use(cors({ origin: true }));
 
 main.use(bodyParser.json());
 main.use(bodyParser.urlencoded({ extended: false }));
@@ -45,17 +48,20 @@ exports.uploadAdvertisements = functions.https.onRequest((req, res) => {
 
 const db = admin.firestore();
 
+/**
+ *  @description  Triggers when there is a new document in the top level 'allPrivateNotification' collection
+ */
 exports.syncFlagPrivateNotification = functions.firestore
   .document("allPrivateNotifications/{id}")
-  .onCreate(doc => {
+  .onCreate((doc, context) => {
     const notification = doc.data();
+    console.log(doc);
     const specificReceiver = notification.specificReceiver;
     console.log("syncing...", specificReceiver);
     const userPrivateNotificationRef = db.collection(
       `/users/${specificReceiver}/privateNotifications`
     );
-
-    return userPrivateNotificationRef.add(notification);
+    return userPrivateNotificationRef.doc(context.params.id).set(notification);
   });
 
 exports.addDebts = functions.https.onRequest((req, res) => {
