@@ -19,7 +19,6 @@ options.secretOrKey = functions.config().ryoaki.jwtsecret;
 module.exports = passport => {
   passport.use(
     new JwtStrategy(options, (jwt_payload, done) => {
-      console.log("jwt-payload", jwt_payload);
       firebaseHelper.firestore
         .getDocument(db, "users", jwt_payload.uid)
         .then(user => {

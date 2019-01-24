@@ -31,7 +31,7 @@ main.use(passport.initialize());
 // Passport Config
 require("./src/config/passport")(passport);
 main.use("/api/v1/users", userRoutes);
-main.use("/api/v1/upload", uploadRoutes);
+main.use("/api/v1/fileUpload", uploadRoutes);
 main.use("/api/v1/ryoaki-admin", ryoakiAdminRoutes);
 
 exports.ryoakiApp = functions.https.onRequest(main);
