@@ -1,6 +1,7 @@
 const functions = require("firebase-functions");
 const express = require("express");
 const passport = require("passport");
+const bodyParser = require("body-parser");
 
 const { Storage } = require("@google-cloud/storage");
 const os = require("os");
@@ -16,15 +17,20 @@ const storage = new Storage({
 const router = express.Router();
 
 router.post(
-  "/",
+  "/:destination",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    const busboy = new Busboy({ headers: req.headers });
+    const busboy = new Busboy({
+      headers: req.headers
+    });
     let uploadData = null;
+    const destinationFolder = req.params.destination;
+    let theFileName = "";
 
     busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
       const filepath = path.join(os.tmpdir(), filename);
-      uploadData = { file: filepath, type: mimetype };
+      uploadData = { file: filepath, type: mimetype, name: filename };
+      theFileName = filename;
       file.pipe(fs.createWriteStream(filepath));
     });
 
@@ -37,12 +43,12 @@ router.post(
             metadata: {
               contentType: uploadData.type
             }
-          }
-          // destination: "/images"
+          },
+          destination: `/${destinationFolder}/${uploadData.name}`
         })
         .then(() => {
           res.status(200).json({
-            message: "upload success!"
+            message: `uploading ${theFileName} successfully!`
           });
         })
         .catch(err => {
